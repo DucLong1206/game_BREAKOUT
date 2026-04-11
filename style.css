@@ -1,0 +1,173 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  overflow: hidden;
+  font-family: 'Share Tech Mono', monospace;
+}
+
+canvas {
+  border: 1px solid #0a2a1a;
+  border-radius: 4px;
+  display: block;
+  box-shadow: 0 0 40px rgba(0,255,100,0.08), 0 0 80px rgba(0,100,255,0.05);
+}
+
+#hud {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  color: #4af;
+  font-size: 12px;
+  font-family: 'Share Tech Mono', monospace;
+  line-height: 1.7;
+  pointer-events: none;
+  z-index: 10;
+  text-shadow: 0 0 8px rgba(64,170,255,0.6);
+}
+#hud strong { color: #fff; font-family: 'Orbitron', monospace; font-size: 13px; }
+
+#camPreview {
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+  width: 160px;
+  height: 120px;
+  border: 1px solid #0f4;
+  border-radius: 6px;
+  transform: scaleX(-1);
+  z-index: 20;
+  object-fit: cover;
+  opacity: 0.8;
+}
+
+#legend {
+  position: fixed;
+  bottom: 10px;
+  left: 10px;
+  color: #556;
+  font-size: 10px;
+  font-family: 'Share Tech Mono', monospace;
+  line-height: 1.9;
+  pointer-events: none;
+  z-index: 10;
+}
+#legend span {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+/* DIALOG OVERLAY */
+#dialog {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0,0,0,0.82);
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+#dialog.show { display: flex; }
+
+#dialog-box {
+  width: 560px;
+  border: 1px solid #0f4;
+  border-radius: 6px;
+  background: linear-gradient(160deg, #020e08 0%, #000d1a 100%);
+  padding: 28px 32px 24px;
+  box-shadow: 0 0 60px rgba(0,255,80,0.15), inset 0 0 30px rgba(0,60,20,0.3);
+  position: relative;
+  overflow: hidden;
+}
+#dialog-box::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #0f4, #4af, #0f4, transparent);
+  animation: scanline 3s linear infinite;
+}
+@keyframes scanline {
+  0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; }
+}
+
+#dialog-speaker {
+  font-family: 'Orbitron', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: #0f4;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+  text-shadow: 0 0 10px rgba(0,255,80,0.8);
+}
+
+#dialog-portrait {
+  font-size: 48px;
+  margin-bottom: 12px;
+  display: block;
+  text-align: left;
+  filter: drop-shadow(0 0 12px rgba(0,255,100,0.5));
+}
+
+#dialog-text {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 14px;
+  color: #bde;
+  line-height: 1.8;
+  min-height: 60px;
+  text-shadow: 0 0 6px rgba(100,200,255,0.3);
+}
+
+#dialog-continue {
+  margin-top: 18px;
+  font-family: 'Orbitron', monospace;
+  font-size: 10px;
+  color: #0f4;
+  letter-spacing: 2px;
+  animation: blink 1.2s step-end infinite;
+  text-align: right;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+#dialog-progress-wrap {
+  margin-top: 12px;
+  height: 4px;
+  background: #0a1a0a;
+  border-radius: 2px;
+  overflow: hidden;
+}
+#dialog-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #0f4, #4af);
+  width: 0%;
+  transition: width 0.1s linear;
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(0,255,80,0.6);
+}
+
+/* SCAN LINE EFFECT */
+#scanlines {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(0,0,0,0.04) 3px,
+    rgba(0,0,0,0.04) 4px
+  );
+}
