@@ -216,7 +216,7 @@ canvas {
     <div id="dialog-progress-wrap">
       <div id="dialog-progress-bar"></div>
     </div>
-    <div id="dialog-continue">[ GIỮ 👌 ĐỂ TIẾP TỤC ]</div>
+    <div id="dialog-continue">[ GIỮ 👍 ĐỂ TIẾP TỤC · GIỮ ✋ ĐỂ BỎ QUA ]</div>
   </div>
 </div>
 
@@ -378,8 +378,12 @@ const DIALOGS = {
    ============================================================ */
 let handX        = CFG.W / 2;
 let isOK         = false;
+let isThumbsUp   = false;
+let isOpenPalm   = false;
 let okFrames     = 0;
 const OK_HOLD    = 55;
+const DIALOG_CONTINUE_HOLD = 30;
+const DIALOG_SKIP_HOLD = 18;
 
 let gameState    = "DIALOG";  // DIALOG | MENU | PLAY | BOSS | WIN | GAMEOVER
 let currentLevel = 1;
@@ -406,6 +410,8 @@ let dialogSpeaker    = "";
 let dialogPortrait   = "";
 let dialogSpeakerColor = "#0f4";
 let dialogHoldFrames = 0;
+let dialogSkipFrames = 0;
+const INTRO_SEEN_KEY = "breakout_intro_seen_v1";
 
 const STARS = Array.from({ length: 100 }, () => ({
   x: Math.random() * 820,
@@ -426,6 +432,7 @@ function showDialog(config, callback) {
   dialogIndex        = 0;
   dialogCallback     = callback;
   dialogHoldFrames   = 0;
+  dialogSkipFrames   = 0;
 
   document.getElementById("dialog-speaker").textContent = `— ${dialogSpeaker} —`;
   document.getElementById("dialog-speaker").style.color = dialogSpeakerColor;
@@ -459,15 +466,25 @@ function updateDialog() {
     }
   }
 
-  // Progress bar for OK hold
+  // Progress bar for thumbs up hold
   if (dialogDone) {
-    if (isOK) dialogHoldFrames++;
+    if (isThumbsUp) dialogHoldFrames++;
     else dialogHoldFrames = 0;
 
-    const pct = Math.min(dialogHoldFrames / OK_HOLD, 1) * 100;
+    if (isOpenPalm) dialogSkipFrames++;
+    else dialogSkipFrames = 0;
+
+    const pct = Math.min(dialogHoldFrames / DIALOG_CONTINUE_HOLD, 1) * 100;
     document.getElementById("dialog-progress-bar").style.width = pct + "%";
 
-    if (dialogHoldFrames >= OK_HOLD) {
+    if (dialogSkipFrames >= DIALOG_SKIP_HOLD) {
+      dialogSkipFrames = 0;
+      document.getElementById("dialog").classList.remove("show");
+      if (dialogCallback) dialogCallback();
+      return;
+    }
+
+    if (dialogHoldFrames >= DIALOG_CONTINUE_HOLD) {
       dialogHoldFrames = 0;
       dialogIndex++;
       if (dialogIndex >= dialogQueue.length) {
@@ -494,6 +511,8 @@ mpHands.onResults(results => {
   const statusEl = document.getElementById("status");
   if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
     isOK = false;
+    isThumbsUp = false;
+    isOpenPalm = false;
     statusEl.textContent = "❌ Không thấy tay";
     return;
   }
@@ -504,7 +523,13 @@ mpHands.onResults(results => {
   handX = lerp(handX, targetX, 0.28);
   const d = hypot(index.x - thumb.x, index.y - thumb.y);
   isOK = d < 0.065;
-  statusEl.textContent = isOK ? "👌 Giữ để xác nhận..." : "✋ Đưa tay vào khung";
+  isThumbsUp = detectThumbsUp(hand);
+  isOpenPalm = detectOpenPalm(hand);
+
+  if (isOpenPalm) statusEl.textContent = "✋ Giữ để bỏ qua hội thoại";
+  else if (isThumbsUp) statusEl.textContent = "👍 Giữ để tiếp tục hội thoại";
+  else if (isOK) statusEl.textContent = "👌 Giữ để xác nhận...";
+  else statusEl.textContent = "✋ Đưa tay vào khung";
 });
 
 function setupCamera() {
@@ -528,7 +553,19 @@ function setupCamera() {
           handX = e.clientX - rect.left;
         }
       });
-      document.addEventListener("click", () => { isOK = true; setTimeout(() => isOK = false, 800); });
+      document.addEventListener("click", () => {
+        isOK = true;
+        isThumbsUp = true;
+        setTimeout(() => {
+          isOK = false;
+          isThumbsUp = false;
+        }, 800);
+      });
+      document.addEventListener("contextmenu", e => {
+        e.preventDefault();
+        isOpenPalm = true;
+        setTimeout(() => { isOpenPalm = false; }, 500);
+      });
     });
 }
 
@@ -590,6 +627,33 @@ function weightedRandom(weights) {
   for (let i = 0; i < weights.length; i++) { r -= weights[i]; if (r <= 0) return i; }
   return weights.length - 1;
 }
+function detectThumbsUp(hand) {
+  const thumbTip = hand[4];
+  const thumbIp = hand[3];
+  const wrist = hand[0];
+  const indexTip = hand[8];
+  const middleTip = hand[12];
+  const ringTip = hand[16];
+  const pinkyTip = hand[20];
+  const indexMcp = hand[5];
+  const middleMcp = hand[9];
+  const ringMcp = hand[13];
+  const pinkyMcp = hand[17];
+  const foldedFingers =
+    indexTip.y > indexMcp.y &&
+    middleTip.y > middleMcp.y &&
+    ringTip.y > ringMcp.y &&
+    pinkyTip.y > pinkyMcp.y;
+  const thumbRaised = thumbTip.y < thumbIp.y && thumbTip.y < wrist.y;
+  return foldedFingers && thumbRaised;
+}
+function detectOpenPalm(hand) {
+  const fingerTips = [8, 12, 16, 20];
+  const fingerPips = [6, 10, 14, 18];
+  const fingersExtended = fingerTips.every((tip, i) => hand[tip].y < hand[fingerPips[i]].y);
+  const thumbExtended = Math.abs(hand[4].x - hand[3].x) > 0.035 || hand[4].y < hand[3].y;
+  return fingersExtended && thumbExtended;
+}
 function hexToRGB(hex) {
   return { r: parseInt(hex.slice(1,3),16), g: parseInt(hex.slice(3,5),16), b: parseInt(hex.slice(5,7),16) };
 }
@@ -607,11 +671,17 @@ new p5(function (p) {
     p.textFont("'Share Tech Mono', monospace");
     setupCamera();
 
-    // Start with intro dialog → menu
-    showDialog(DIALOGS.MENU, () => {
+    // Intro dialog only shows on first launch
+    const introSeen = localStorage.getItem(INTRO_SEEN_KEY) === "1";
+    if (!introSeen) {
+      showDialog(DIALOGS.MENU, () => {
+        gameState = "MENU";
+      });
+      localStorage.setItem(INTRO_SEEN_KEY, "1");
+      gameState = "DIALOG";
+    } else {
       gameState = "MENU";
-    });
-    gameState = "DIALOG";
+    }
   };
 
   p.draw = function () {
