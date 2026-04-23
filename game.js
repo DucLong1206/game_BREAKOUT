@@ -27,6 +27,32 @@ const CFG = {
 };
 
 /* ============================================================
+   AUDIO ELEMENTS
+   ============================================================ */
+const bgMusic = document.getElementById('bgMusic');
+const hitBrickSound = document.getElementById('hitBrickSound');
+const hitPaddleSound = document.getElementById('hitPaddleSound');
+const hitBossSound = document.getElementById('hitBossSound');
+const powerUpSound = document.getElementById('powerUpSound');
+
+/* ============================================================
+   AUDIO FUNCTIONS
+   ============================================================ */
+function playSound(audio) {
+  if (audio) {
+    audio.currentTime = 0; // Reset to start for overlapping sounds
+    audio.play().catch(e => console.log('Audio play failed:', e)); // Handle autoplay restrictions
+  }
+}
+
+function startBackgroundMusic() {
+  if (bgMusic) {
+    bgMusic.volume = 0.3; // Set volume to 30% for background
+    playSound(bgMusic);
+  }
+}
+
+/* ============================================================
    BOSS DEFINITIONS
    ============================================================ */
 const BOSS_DEFS = [
@@ -522,6 +548,7 @@ new p5(function (p) {
       initLevel(1);
       beginLevelCountdown(1, () => {
         gameState = "PLAY";
+        startBackgroundMusic();
       });
       gameState = "COUNTDOWN";
     }
@@ -567,6 +594,7 @@ new p5(function (p) {
     initLevel(lvl);
     showDialog(DIALOGS.LEVEL[lvl - 1], () => {
       gameState = "PLAY";
+      startBackgroundMusic();
     });
     gameState = "DIALOG";
   }
@@ -906,6 +934,7 @@ new p5(function (p) {
 
   /* ------ POWER-UP APPLICATION ------ */
   function applyPowerUp(pu) {
+    playSound(powerUpSound);
     if (pu.type === "MULTIBALL") {
       const len = balls.length;
       for (let k = 0; k < len && balls.length < CFG.MAX_BALLS; k++) {
@@ -981,6 +1010,7 @@ class Ball {
       const diff = (this.x - px) / (pw / 2);
       this.vx = diff * (5 + currentLevel * 0.5);
       this.y = py - CFG.PADDLE_H / 2 - this.r - 1;
+      playSound(hitPaddleSound);
     }
   }
 
@@ -994,6 +1024,7 @@ class Ball {
     const minH = Math.min(oL, oR), minV = Math.min(oT, oB);
     if (minH < minV) { this.vx *= -1; this.x += oL < oR ? -minH : minH; }
     else             { this.vy *= -1; this.y += oT < oB ? -minV : minV; }
+    playSound(hitBrickSound);
     return true;
   }
 
@@ -1075,6 +1106,7 @@ class Boss {
     ball.vy *= -1;
     ball.y = bT - ball.r - 1;
     this.hitFlash = 8;
+    playSound(hitBossSound);
     return true;
   }
 
